@@ -1,0 +1,149 @@
+package main
+
+import (
+	"errors"
+
+	"github.com/ccp-clientlibrary-go/ccp"
+	"github.com/hashicorp/terraform/helper/schema"
+)
+
+func resourceUser() *schema.Resource {
+	return &schema.Resource{
+		Create: resourceUserCreate,
+		Read:   resourceUserRead,
+		Update: resourceUserUpdate,
+		Delete: resourceUserDelete,
+
+		Schema: map[string]*schema.Schema{
+			"username": &schema.Schema{
+				Type:     schema.TypeString,
+				Required: true,
+				ForceNew: true,
+			},
+			"password": &schema.Schema{
+				Type:      schema.TypeString,
+				Required:  true,
+				Sensitive: true,
+			},
+			"firstname": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"lastname": &schema.Schema{
+				Type:     schema.TypeString,
+				Optional: true,
+			},
+			"role": &schema.Schema{
+				Type:     schema.TypeString,
+				Required: true,
+			},
+			"disable": &schema.Schema{
+				Type:     schema.TypeBool,
+				Optional: true,
+			},
+		},
+	}
+}
+
+func resourceUserCreate(d *schema.ResourceData, m interface{}) error {
+
+	username := d.Get("username").(string)
+	d.SetId(username)
+
+	client := m.(*ccp.Client)
+
+	newUser := ccp.User{
+
+		FirstName: ccp.String(d.Get("firstname").(string)),
+		LastName:  ccp.String(d.Get("lastname").(string)),
+		Password:  ccp.String(d.Get("password").(string)),
+		Username:  ccp.String(d.Get("username").(string)),
+		Disable:   ccp.Bool(d.Get("disable").(bool)),
+		Role:      ccp.String(d.Get("role").(string)),
+	}
+
+	user, err := client.AddUser(&newUser)
+
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	return setUserResourceData(d, user)
+}
+
+func resourceUserRead(d *schema.ResourceData, m interface{}) error {
+
+	client := m.(*ccp.Client)
+	user, err := client.GetUser(d.Get("username").(string))
+
+	if err != nil {
+		return errors.New("UNABLE TO RETRIEVE DETAILS FOR USER: " + d.Get("username").(string))
+	}
+
+	return setUserResourceData(d, user)
+}
+
+func resourceUserUpdate(d *schema.ResourceData, m interface{}) error {
+
+	client := m.(*ccp.Client)
+
+	newUser := ccp.User{
+		Username:  ccp.String(d.Get("username").(string)),
+		FirstName: ccp.String(d.Get("firstname").(string)),
+		LastName:  ccp.String(d.Get("lastname").(string)),
+		Password:  ccp.String(d.Get("password").(string)),
+		Disable:   ccp.Bool(d.Get("disable").(bool)),
+		Role:      ccp.String(d.Get("role").(string)),
+	}
+
+	user, err := client.PatchUser(&newUser)
+
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	user, err = client.GetUser(d.Get("username").(string))
+
+	if err != nil {
+		return errors.New("UNABLE TO RETRIEVE DETAILS FOR USER: " + d.Get("username").(string))
+	}
+
+	return setUserResourceData(d, user)
+}
+
+func resourceUserDelete(d *schema.ResourceData, m interface{}) error {
+
+	client := m.(*ccp.Client)
+
+	err := client.DeleteUser(d.Get("username").(string))
+
+	if err != nil {
+		return errors.New(err.Error())
+	}
+
+	d.SetId("")
+	return nil
+}
+
+func setUserResourceData(d *schema.ResourceData, u *ccp.User) error {
+
+	if err := d.Set("firstname", u.FirstName); err != nil {
+		return errors.New("CANNOT SET FIRST NAME")
+	}
+	if err := d.Set("lastname", u.LastName); err != nil {
+		return errors.New("CANNOT SET LAST NAME")
+	}
+	if err := d.Set("username", u.Username); err != nil {
+		return errors.New("CANNOT SET USERNAME")
+	}
+	if err := d.Set("password", u.Password); err != nil {
+		return errors.New("CANNOT SET PASSWORD")
+	}
+	if err := d.Set("disable", u.Disable); err != nil {
+		return errors.New("CANNOT SET DISABLE FIELD")
+	}
+	if err := d.Set("role", u.Role); err != nil {
+		return errors.New("CANNOT SET ROLE")
+	}
+	return nil
+}
