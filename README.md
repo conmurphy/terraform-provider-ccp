@@ -154,36 +154,6 @@ resource "ccp_cluster" "cluster" {
 - [Cluster](#cluster)
 - [User](#user)
 
-### User
-
-```go
-	token     *string 
-	username  *string 
-	disable   *bool  
-	role      *string 
-	firstname *string
-	lastname  *string
-	password  *string
-```
-
-##### __Required Fields__
-* Username
-* Role
-
-##### __Important Notes__
-* If ```Username``` is updated the resource will be destroyed and recreated within CCP
-
-##### Example
-```go  
-resource "ccp_user" "user" {
-    firstname       = "Terrafom"
-    lastname        = "Plugin"
-    password        = "myPassword"
-    username        = "builtByTerraform"
-    role            = "Administrator"
-}
-```
-
 ### Cluster
 
 ```go
@@ -456,6 +426,35 @@ resource "ccp_cluster" "cluster" {
 }
 ```
 
+### User
+
+```go
+	token     *string 
+	username  *string 
+	disable   *bool  
+	role      *string 
+	firstname *string
+	lastname  *string
+	password  *string
+```
+
+##### __Required Fields__
+* Username
+* Role
+
+##### __Important Notes__
+* If ```Username``` is updated the resource will be destroyed and recreated within CCP
+
+##### Example
+```go  
+resource "ccp_user" "user" {
+    firstname       = "Terrafom"
+    lastname        = "Plugin"
+    password        = "myPassword"
+    username        = "builtByTerraform"
+    role            = "Administrator"
+}
+```
 
 DISCLAIMER:
 
