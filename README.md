@@ -12,6 +12,7 @@ Table of Contents
       * [Resources](#resources)
          * [Cluster](#cluster)
          * [User](#user)
+      * [License](#license)
        
 Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc)
  
@@ -456,6 +457,7 @@ resource "ccp_user" "user" {
 }
 ```
 
-DISCLAIMER:
+## License
 
-These scripts are meant for educational/proof of concept purposes only. Any use of these scripts and tools is at your own risk. There is no guarantee that they have been through thorough testing in a comparable environment and we are not responsible for any damage or data loss incurred with their use.
+This project is licensed to you under the terms of the [Cisco Sample
+Code License](./LICENSE).
