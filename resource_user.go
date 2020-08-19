@@ -16,9 +16,6 @@ or implied.*/
 package main
 
 import (
-	"errors"
-
-	"github.com/ccp-clientlibrary-go/ccp"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
@@ -62,7 +59,7 @@ func resourceUser() *schema.Resource {
 
 func resourceUserCreate(d *schema.ResourceData, m interface{}) error {
 
-	username := d.Get("username").(string)
+	/*username := d.Get("username").(string)
 	d.SetId(username)
 
 	client := m.(*ccp.Client)
@@ -83,24 +80,30 @@ func resourceUserCreate(d *schema.ResourceData, m interface{}) error {
 		return errors.New(err.Error())
 	}
 
-	return setUserResourceData(d, user)
+	return setUserResourceData(d, user)*/
+
+	return nil
 }
 
 func resourceUserRead(d *schema.ResourceData, m interface{}) error {
 
-	client := m.(*ccp.Client)
-	user, err := client.GetUser(d.Get("username").(string))
+	/*
+		client := m.(*ccp.Client)
+		user, err := client.GetUser(d.Get("username").(string))
 
-	if err != nil {
-		return errors.New("UNABLE TO RETRIEVE DETAILS FOR USER: " + d.Get("username").(string))
-	}
+		if err != nil {
+			return errors.New("UNABLE TO RETRIEVE DETAILS FOR USER: " + d.Get("username").(string))
+		}
 
-	return setUserResourceData(d, user)
+		return setUserResourceData(d, user)
+	*/
+
+	return nil
 }
 
 func resourceUserUpdate(d *schema.ResourceData, m interface{}) error {
 
-	client := m.(*ccp.Client)
+	/*client := m.(*ccp.Client)
 
 	newUser := ccp.User{
 		Username:  ccp.String(d.Get("username").(string)),
@@ -124,11 +127,13 @@ func resourceUserUpdate(d *schema.ResourceData, m interface{}) error {
 	}
 
 	return setUserResourceData(d, user)
+	*/
+	return nil
 }
 
 func resourceUserDelete(d *schema.ResourceData, m interface{}) error {
 
-	client := m.(*ccp.Client)
+	/*client := m.(*ccp.Client)
 
 	err := client.DeleteUser(d.Get("username").(string))
 
@@ -138,9 +143,11 @@ func resourceUserDelete(d *schema.ResourceData, m interface{}) error {
 
 	d.SetId("")
 	return nil
+	*/
+	return nil
 }
 
-func setUserResourceData(d *schema.ResourceData, u *ccp.User) error {
+/*func setUserResourceData(d *schema.ResourceData, u *ccp.User) error {
 
 	if err := d.Set("firstname", u.FirstName); err != nil {
 		return errors.New("CANNOT SET FIRST NAME")
@@ -161,4 +168,4 @@ func setUserResourceData(d *schema.ResourceData, u *ccp.User) error {
 		return errors.New("CANNOT SET ROLE")
 	}
 	return nil
-}
+}*/
