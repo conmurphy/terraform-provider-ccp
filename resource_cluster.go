@@ -16,10 +16,8 @@ or implied.*/
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"log"
-	"reflect"
 
 	"github.com/ccp-clientlibrary-go/ccp"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -476,6 +474,10 @@ func resourceClusterCreate(d *schema.ResourceData, m interface{}) error {
 		nodePool = append(nodePool, nodes)
 	}
 
+	if len(nodePool) == 0 {
+		nodePool = nil
+	}
+
 	masterNodePool := ccp.MasterNodePool{
 		Name:     ccp.String(masterNode["name"].(string)),
 		Size:     ccp.Int64(int64(masterNode["size"].(int))),
@@ -525,6 +527,10 @@ func resourceClusterCreate(d *schema.ResourceData, m interface{}) error {
 			nodePool = append(nodePool, nodes)
 		}
 
+		if len(nodePool) == 0 {
+			nodePool = nil
+		}
+
 		workerNodePool := ccp.WorkerNodePool{
 			Name:     ccp.String(worker["name"].(string)),
 			Size:     ccp.Int64(int64(worker["size"].(int))),
@@ -544,6 +550,40 @@ func resourceClusterCreate(d *schema.ResourceData, m interface{}) error {
 	dockerNoProxy := []string{}
 	for _, proxy := range d.Get("docker_no_proxy").([]interface{}) {
 		dockerNoProxy = append(dockerNoProxy, proxy.(string))
+	}
+
+	// the next few if statements check if the key exists in the .tf file, otherwise it returns nil so they don't
+	// end up in the json request to CCP. Without this all the Bools that don't exist default to false
+	var aws_iam_enabled *bool
+
+	if result, ok := d.GetOkExists("aws_iam_enabled"); ok == false {
+		aws_iam_enabled = nil
+	} else {
+		aws_iam_enabled = ccp.Bool(result.(bool))
+	}
+
+	var ingress_as_lb *bool
+
+	if result, ok := d.GetOkExists("ingress_as_lb"); ok == false {
+		ingress_as_lb = nil
+	} else {
+		ingress_as_lb = ccp.Bool(result.(bool))
+	}
+
+	var etcd_encrypted *bool
+
+	if result, ok := d.GetOkExists("etcd_encrypted"); ok == false {
+		etcd_encrypted = nil
+	} else {
+		etcd_encrypted = ccp.Bool(result.(bool))
+	}
+
+	var skip_management *bool
+
+	if result, ok := d.GetOkExists("skip_management"); ok == false {
+		skip_management = nil
+	} else {
+		skip_management = ccp.Bool(result.(bool))
 	}
 
 	newCluster := ccp.Cluster{
@@ -570,27 +610,25 @@ func resourceClusterCreate(d *schema.ResourceData, m interface{}) error {
 		MasterNodePool:     &masterNodePool,
 		WorkerNodePool:     &workerPool,
 		NetworkPlugin:      &networkPlugin,
-		IngressAsLB:        ccp.Bool(d.Get("ingress_as_lb").(bool)),
+		IngressAsLB:        ingress_as_lb,
 		NginxIngressClass:  ccp.String(d.Get("nginx_ingress_class").(string)),
-		ETCDEncrypted:      ccp.Bool(d.Get("etcd_encrypted").(bool)),
-		SkipManagement:     ccp.Bool(d.Get("skip_management").(bool)),
+		ETCDEncrypted:      etcd_encrypted,
+		SkipManagement:     skip_management,
 		DockerNoProxy:      &dockerNoProxy,
 		RoutableCIDR:       ccp.String(d.Get("routable_cidr").(string)),
 		ImagePrefix:        ccp.String(d.Get("image_prefix").(string)),
 		ACIProfileUUID:     ccp.String(d.Get("aci_profile_uuid").(string)),
 		Description:        ccp.String(d.Get("description").(string)),
-		AWSIamEnabled:      ccp.Bool(d.Get("aws_iam_enabled").(bool)),
+		AWSIamEnabled:      aws_iam_enabled,
 	}
 
-	cluster, err := client.AddCluster(&newCluster)
-
-	log.Printf(" [DEBUG] ***************** CLUSTER: %+v", err)
-
-	log.Printf(" [DEBUG] ***************** CLUSTER: %+v", cluster)
+	cluster, err := client.AddClusterSynchronous(&newCluster)
 
 	if err != nil {
 		return errors.New(err.Error())
 	}
+
+	log.Printf(" [DEBUG] ***************** CLUSTER STATUS: %+v", *cluster)
 
 	uuid := *cluster.UUID
 
@@ -603,6 +641,8 @@ func resourceClusterCreate(d *schema.ResourceData, m interface{}) error {
 	if err != nil {
 		return errors.New(err.Error())
 	}
+
+	log.Printf(" [DEBUG] ***************** CLUSTER STATUS: %+v", *cluster.Status)
 
 	return setClusterResourceData(d, cluster)
 }
@@ -623,29 +663,29 @@ func resourceClusterRead(d *schema.ResourceData, m interface{}) error {
 
 func resourceClusterUpdate(d *schema.ResourceData, m interface{}) error {
 
-	/*client := m.(*ccp.Client)
+	log.Printf("[DEBUG] *********** loadbalancer_ip_num %d", d.Get("loadbalancer_ip_num").(int))
+
+	client := m.(*ccp.Client)
 
 	newCluster := ccp.Cluster{
-		UUID:              ccp.String(d.Get("uuid").(string)),
-		Workers:           ccp.Int64(int64(d.Get("workers").(int))),
 		LoadBalancerIPNum: ccp.Int64(int64(d.Get("loadbalancer_ip_num").(int))),
 	}
 
-	cluster, err := client.PatchCluster(&newCluster)
+	cluster, err := client.PatchCluster(&newCluster, d.Get("uuid").(string))
 
 	if err != nil {
 		return errors.New(err.Error())
 	}
 
-	cluster, err = client.GetCluster(d.Get("name").(string))
+	cluster, err = client.GetClusterByName(d.Get("name").(string))
 
 	if err != nil {
 		return errors.New("UNABLE TO RETRIEVE DETAILS FOR CLUSTER: " + d.Get("name").(string))
 	}
 
-	return setClusterResourceData(d, cluster)*/
+	log.Printf("[DEBUG] *********** PATCH %+v", *cluster.LoadBalancerIPNum)
 
-	return nil
+	return setClusterResourceData(d, cluster)
 
 }
 
@@ -665,44 +705,7 @@ func resourceClusterDelete(d *schema.ResourceData, m interface{}) error {
 
 func setClusterResourceData(d *schema.ResourceData, u *ccp.Cluster) error {
 
-	log.Printf(" [DEBUG] ***************** setClusterResourceData: %+v", u)
-	log.Printf(" [DEBUG] ***************** setClusterResourceData: %T", u)
-	log.Printf(" [DEBUG] ***************** setClusterResourceData: %+v", u.Type)
-	log.Printf(" [DEBUG] ***************** setClusterResourceData: %T", u.Type)
-
-	b, _ := json.Marshal(u.NetworkPlugin)
-
-	var f interface{}
-	_ = json.Unmarshal(b, &f)
-
-	m := f.(map[string]interface{})
-
-	pairs := [][]string{}
-	for key, value := range m {
-		log.Printf(" [DEBUG] ***************** keyType, value: %T, %T", key, value)
-		log.Printf(" [DEBUG] ***************** key, value: %s, %s", key, value)
-		//pairs = append(pairs, []string{key, value.})
-	}
-
-	log.Printf(" [DEBUG] ***************** setClusterResourceData: %+v", u.Infra)
-	log.Printf(" [DEBUG] ***************** setClusterResourceData: %T", u.Infra)
-
-	log.Printf(" [DEBUG] ***************** setClusterResourceData: %+v", b)
-	log.Printf(" [DEBUG] ***************** setClusterResourceData: %T", b)
-
-	log.Printf(" [DEBUG] ***************** setClusterResourceData: %+v", m)
-	log.Printf(" [DEBUG] ***************** setClusterResourceData: %T", m)
-
-	log.Printf(" [DEBUG] ***************** setClusterResourceData: %+v", pairs)
-	log.Printf(" [DEBUG] ***************** setClusterResourceData: %T", pairs)
-
-	var infra []interface{}
-	output := structToMap(u.Infra)
-
-	infra = append(infra, output)
-
-	log.Printf(" [DEBUG] ***************** infra: %T", infra)
-	log.Printf(" [DEBUG] ***************** infra: %+v", infra)
+	log.Printf("[DEBUG] *********** CLUSTER DATA: %+v", *u.MasterNodePool.Nodes)
 
 	if err := d.Set("uuid", u.UUID); err != nil {
 		return errors.New("CANNOT SET UUID")
@@ -762,22 +765,147 @@ func setClusterResourceData(d *schema.ResourceData, u *ccp.Cluster) error {
 		return errors.New("CANNOT SET DOCKER BIP")
 	}
 
-	/*if err := d.Set("infra", infra); err != nil {
+	infraNetworksOut := make([]interface{}, 0, 0)
+
+	infraNetworksIn := (*u.Infra.Networks)[0]
+	infraNetworksOut = append(infraNetworksOut, infraNetworksIn)
+
+	infraOut := make([]interface{}, 0, 0)
+
+	infraIn := make(map[string]interface{})
+
+	if u.Infra.ResourcePool == nil {
+		infraIn["resource_pool"] = ""
+	} else {
+		infraIn["resource_pool"] = *u.Infra.ResourcePool
+	}
+	infraIn["datacenter"] = *u.Infra.Datacenter
+	infraIn["cluster"] = *u.Infra.Cluster
+	infraIn["datastore"] = *u.Infra.Datastore
+
+	infraIn["networks"] = infraNetworksOut
+
+	infraOut = append(infraOut, infraIn)
+
+	if err := d.Set("infra", infraOut); err != nil {
 		log.Printf("[DEBUG] *********** INFRA: %+v", err)
 		return errors.New("CANNOT SET INFRA")
 	}
-	if err := d.Set("master_node_pool", u.MasterNodePool); err != nil {
+
+	masterPoolNodesOut := make([]interface{}, 0, 0)
+	masterPoolNodesIn := make(map[string]interface{})
+
+	for _, node := range *u.MasterNodePool.Nodes {
+		masterPoolNodesIn["name"] = *node.Name
+		masterPoolNodesIn["status"] = *node.Status
+
+		if node.StatusDetail != nil {
+			masterPoolNodesIn["status_detail"] = *node.StatusDetail
+		}
+
+		if node.StatusReason != nil {
+			masterPoolNodesIn["status_reason"] = *node.StatusReason
+		}
+
+		masterPoolNodesIn["private_ip"] = *node.PrivateIP
+		masterPoolNodesIn["public_ip"] = *node.PublicIP
+		masterPoolNodesIn["phase"] = *node.Phase
+
+		masterPoolNodesOut = append(masterPoolNodesOut, masterPoolNodesIn)
+	}
+
+	masterPoolOut := make([]interface{}, 0, 0)
+
+	masterPoolIn := make(map[string]interface{})
+
+	masterPoolIn["name"] = *u.MasterNodePool.Name
+	masterPoolIn["memory"] = *u.MasterNodePool.Memory
+	masterPoolIn["size"] = *u.MasterNodePool.Size
+	masterPoolIn["vcpus"] = *u.MasterNodePool.VCPUs
+	masterPoolIn["kubernetes_version"] = *u.MasterNodePool.KubernetesVersion
+	masterPoolIn["ssh_user"] = *u.MasterNodePool.SSHUser
+	masterPoolIn["ssh_key"] = *u.MasterNodePool.SSHKey
+	masterPoolIn["template"] = *u.MasterNodePool.Template
+
+	masterPoolIn["nodes"] = masterPoolNodesOut
+
+	masterPoolOut = append(masterPoolOut, masterPoolIn)
+
+	if err := d.Set("master_node_pool", masterPoolOut); err != nil {
 		return errors.New("CANNOT SET MASTER NODE POOL")
 	}
-	if err := d.Set("worker_node_pools", u.WorkerNodePool); err != nil {
+
+	workerPoolOut := make([]interface{}, 0, 0)
+	workerPoolIn := make(map[string]interface{})
+
+	workerPoolNodesOut := make([]interface{}, 0, 0)
+	workerPoolNodesIn := make(map[string]interface{})
+
+	for _, workerNode := range *u.WorkerNodePool {
+
+		workerPoolIn = make(map[string]interface{})
+
+		workerPoolNodesOut = make([]interface{}, 0, 0)
+		workerPoolNodesIn = make(map[string]interface{})
+
+		for _, node := range *workerNode.Nodes {
+			workerPoolNodesIn["name"] = *node.Name
+			workerPoolNodesIn["status"] = *node.Status
+
+			if node.StatusDetail != nil {
+				workerPoolNodesIn["status_detail"] = *node.StatusDetail
+			}
+
+			if node.StatusReason != nil {
+				workerPoolNodesIn["status_reason"] = *node.StatusReason
+			}
+
+			workerPoolNodesIn["private_ip"] = *node.PrivateIP
+			workerPoolNodesIn["public_ip"] = *node.PublicIP
+			workerPoolNodesIn["phase"] = *node.Phase
+
+			workerPoolNodesOut = append(workerPoolNodesOut, workerPoolNodesIn)
+		}
+
+		workerPoolIn["name"] = *workerNode.Name
+		workerPoolIn["memory"] = *workerNode.Memory
+		workerPoolIn["size"] = *workerNode.Size
+		workerPoolIn["vcpus"] = *workerNode.VCPUs
+		workerPoolIn["kubernetes_version"] = *workerNode.KubernetesVersion
+		workerPoolIn["ssh_user"] = *workerNode.SSHUser
+		workerPoolIn["ssh_key"] = *workerNode.SSHKey
+		workerPoolIn["template"] = *workerNode.Template
+
+		workerPoolIn["nodes"] = workerPoolNodesOut
+
+		workerPoolOut = append(workerPoolOut, workerPoolIn)
+
+	}
+
+	if err := d.Set("worker_node_pools", workerPoolOut); err != nil {
 		return errors.New("CANNOT SET WORKER NODE POOL")
 	}
-	if err := d.Set("network_plugin", u.NetworkPlugin); err != nil {
+
+	networkPluginDetailsOut := make([]interface{}, 0, 0)
+	networkPluginDetailsIn := make(map[string]interface{})
+
+	networkPluginDetailsIn["pod_cidr"] = *u.NetworkPlugin.Details.PodCIDR
+	networkPluginDetailsOut = append(networkPluginDetailsOut, networkPluginDetailsIn)
+
+	networkPluginOut := make([]interface{}, 0, 0)
+
+	networkPluginIn := make(map[string]interface{})
+
+	networkPluginIn["name"] = *u.NetworkPlugin.Name
+	networkPluginIn["details"] = networkPluginDetailsOut
+
+	networkPluginOut = append(networkPluginOut, networkPluginIn)
+
+	log.Printf("{DEBU} ********* OUT %s", networkPluginOut)
+
+	if err := d.Set("network_plugin", networkPluginOut); err != nil {
 		return errors.New("CANNOT SET NETWORK PLUGIN")
 	}
-	if err := d.Set("networks", u.Infra.Networks); err != nil {
-		return errors.New("CANNOT SET NETWORKS")
-	}*/
 
 	if err := d.Set("ingress_as_lb", u.IngressAsLB); err != nil {
 		return errors.New("CANNOT SET INGRESS AS LB VALUE")
@@ -811,31 +939,4 @@ func setClusterResourceData(d *schema.ResourceData, u *ccp.Cluster) error {
 	}
 
 	return nil
-}
-
-func structToMap(item interface{}) map[string]interface{} {
-
-	res := map[string]interface{}{}
-	if item == nil {
-		return res
-	}
-	v := reflect.TypeOf(item)
-	reflectValue := reflect.ValueOf(item)
-	reflectValue = reflect.Indirect(reflectValue)
-
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
-	}
-	for i := 0; i < v.NumField(); i++ {
-		tag := v.Field(i).Tag.Get("json")
-		field := reflectValue.Field(i).Interface()
-		if tag != "" && tag != "-" {
-			if v.Field(i).Type.Kind() == reflect.Struct {
-				res[tag] = structToMap(field)
-			} else {
-				res[tag] = field
-			}
-		}
-	}
-	return res
 }
