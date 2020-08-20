@@ -326,7 +326,7 @@ func resourceCluster() *schema.Resource {
 								Schema: map[string]*schema.Schema{
 									"pod_cidr": &schema.Schema{
 										Type:     schema.TypeString,
-										Required: true,
+										Optional: true,
 									},
 								},
 							},

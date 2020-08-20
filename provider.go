@@ -42,8 +42,9 @@ func Provider() *schema.Provider {
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			"ccp_user":    resourceUser(),
-			"ccp_cluster": resourceCluster(),
+			"ccp_user":        resourceUser(),
+			"ccp_cluster":     resourceCluster(),
+			"ccp_aci_profile": resourceACIProfile(),
 		},
 		ConfigureFunc: providerConfigure,
 	}
