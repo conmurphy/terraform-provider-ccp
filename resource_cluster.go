@@ -685,6 +685,21 @@ func resourceClusterUpdate(d *schema.ResourceData, m interface{}) error {
 
 	log.Printf("[DEBUG] *********** PATCH %+v", *cluster.LoadBalancerIPNum)
 
+	if d.HasChange("worker_node_pools.0.size") {
+		_, newValue := d.GetChange("worker_node_pools.0.size")
+		cluster, err = client.ScaleCluster(d.Get("uuid").(string), d.Get("worker_node_pools.0.name").(string), newValue.(int))
+	}
+
+	if err != nil {
+		return errors.New("UNABLE TO RETRIEVE DETAILS FOR CLUSTER: " + d.Get("name").(string))
+	}
+
+	cluster, err = client.GetClusterByName(d.Get("name").(string))
+
+	if err != nil {
+		return errors.New("UNABLE TO RETRIEVE DETAILS FOR CLUSTER: " + d.Get("name").(string))
+	}
+
 	return setClusterResourceData(d, cluster)
 
 }
