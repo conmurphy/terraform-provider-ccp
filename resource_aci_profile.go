@@ -49,8 +49,9 @@ func resourceACIProfile() *schema.Resource {
 				Required: true,
 			},
 			"apic_password": &schema.Schema{
-				Type:     schema.TypeString,
-				Required: true,
+				Type:      schema.TypeString,
+				Required:  true,
+				Sensitive: true,
 			},
 			"aci_vmm_domain_name": &schema.Schema{
 				Type:     schema.TypeString,
@@ -177,44 +178,48 @@ func resourceACIProfileRead(d *schema.ResourceData, m interface{}) error {
 
 func resourceACIProfileUpdate(d *schema.ResourceData, m interface{}) error {
 
-	log.Printf("[DEBUG] *********** loadbalancer_ip_num %d", d.Get("loadbalancer_ip_num").(int))
-
 	client := m.(*ccp.Client)
 
-	newCluster := ccp.Cluster{
-		LoadBalancerIPNum: ccp.Int64(int64(d.Get("loadbalancer_ip_num").(int))),
+	nameservers := []string{}
+	for _, server := range d.Get("nameservers").([]interface{}) {
+		nameservers = append(nameservers, server.(string))
 	}
 
-	cluster, err := client.PatchCluster(&newCluster, d.Get("uuid").(string))
+	newACIProfile := ccp.ACIProfile{
+
+		Name:                     ccp.String(d.Get("name").(string)),
+		APICHosts:                ccp.String(d.Get("apic_hosts").(string)),
+		APICUsername:             ccp.String(d.Get("apic_username").(string)),
+		APICPassword:             ccp.String(d.Get("apic_password").(string)),
+		ACIVMMDomainName:         ccp.String(d.Get("aci_vmm_domain_name").(string)),
+		ACIInfraVLANID:           ccp.Int(d.Get("aci_infra_vlan_id").(int)),
+		VRFName:                  ccp.String(d.Get("vrf_name").(string)),
+		L3OutsidePolicyName:      ccp.String(d.Get("l3_outside_policy_name").(string)),
+		L3OutsideNetworkName:     ccp.String(d.Get("l3_outside_network_name").(string)),
+		AAEPName:                 ccp.String(d.Get("aaep_name").(string)),
+		Nameservers:              &nameservers,
+		ControlPlaneContractName: ccp.String(d.Get("control_plane_contract_name").(string)),
+		NodeVLANStart:            ccp.Int(d.Get("node_vlan_start").(int)),
+		NodeVLANEnd:              ccp.Int(d.Get("node_vlan_end").(int)),
+		PodSubnetStart:           ccp.String(d.Get("pod_subnet_start").(string)),
+		ServiceSubnetStart:       ccp.String(d.Get("service_subnet_start").(string)),
+		MulticastRange:           ccp.String(d.Get("multicast_range").(string)),
+		ACITenant:                ccp.String(d.Get("aci_tenant").(string)),
+	}
+
+	profile, err := client.PatchACIProfile(&newACIProfile, d.Get("uuid").(string))
 
 	if err != nil {
 		return errors.New(err.Error())
 	}
 
-	cluster, err = client.GetClusterByName(d.Get("name").(string))
+	profile, err = client.GetACIProfileByName(d.Get("name").(string))
 
 	if err != nil {
-		return errors.New("UNABLE TO RETRIEVE DETAILS FOR CLUSTER: " + d.Get("name").(string))
+		return errors.New("UNABLE TO RETRIEVE DETAILS FOR ACI PROFILE: " + d.Get("name").(string))
 	}
 
-	log.Printf("[DEBUG] *********** PATCH %+v", *cluster.LoadBalancerIPNum)
-
-	if d.HasChange("worker_node_pools.0.size") {
-		_, newValue := d.GetChange("worker_node_pools.0.size")
-		cluster, err = client.ScaleCluster(d.Get("uuid").(string), d.Get("worker_node_pools.0.name").(string), newValue.(int))
-	}
-
-	if err != nil {
-		return errors.New("UNABLE TO RETRIEVE DETAILS FOR CLUSTER: " + d.Get("name").(string))
-	}
-
-	cluster, err = client.GetClusterByName(d.Get("name").(string))
-
-	if err != nil {
-		return errors.New("UNABLE TO RETRIEVE DETAILS FOR CLUSTER: " + d.Get("name").(string))
-	}
-
-	return setClusterResourceData(d, cluster)
+	return setACIProfileResourceData(d, profile)
 
 }
 
@@ -222,7 +227,7 @@ func resourceACIProfileDelete(d *schema.ResourceData, m interface{}) error {
 
 	client := m.(*ccp.Client)
 
-	err := client.DeleteCluster(d.Get("uuid").(string))
+	err := client.DeleteACIProfile(d.Get("uuid").(string))
 
 	if err != nil {
 		return errors.New(err.Error())

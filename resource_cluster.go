@@ -69,11 +69,11 @@ func resourceCluster() *schema.Resource {
 			},
 			"loadbalancer_ip_num": &schema.Schema{
 				Type:     schema.TypeInt,
-				Required: true,
+				Optional: true,
 			},
 			"subnet_uuid": &schema.Schema{
 				Type:     schema.TypeString,
-				Required: true,
+				Optional: true,
 			},
 			"ntp_pools": {
 				Type:     schema.TypeList,
@@ -142,7 +142,7 @@ func resourceCluster() *schema.Resource {
 						},
 						"networks": &schema.Schema{
 							Type:     schema.TypeList,
-							Required: true,
+							Optional: true,
 							Elem:     &schema.Schema{Type: schema.TypeString},
 						},
 					},
@@ -387,11 +387,20 @@ func resourceClusterCreate(d *schema.ResourceData, m interface{}) error {
 	networkPluginsKeys := networkPlugins[0].(map[string]interface{})
 
 	networkPluginName := networkPluginsKeys["name"].(string)
-	networkPluginDetails := networkPluginsKeys["details"].([]interface{})
-	detailsPodCIDR := networkPluginDetails[0].(map[string]interface{})
+	var networkPluginDetail ccp.NetworkPluginDetails
 
-	networkPluginDetail := ccp.NetworkPluginDetails{
-		PodCIDR: ccp.String(detailsPodCIDR["pod_cidr"].(string)),
+	if networkPluginsKeys["details"].([]interface{}) != nil {
+		networkPluginDetails := networkPluginsKeys["details"].([]interface{})
+		if networkPluginDetails[0] != nil {
+			detailsPodCIDR := networkPluginDetails[0].(map[string]interface{})
+			if detailsPodCIDR["pod_cidr"] != nil {
+				networkPluginDetail = ccp.NetworkPluginDetails{
+					PodCIDR: ccp.String(detailsPodCIDR["pod_cidr"].(string)),
+				}
+			}
+
+		}
+
 	}
 
 	networkPlugin := ccp.NetworkPlugin{
@@ -401,10 +410,11 @@ func resourceClusterCreate(d *schema.ResourceData, m interface{}) error {
 
 	infrastructureKeys := d.Get("infra").([]interface{})
 	infrastructure := infrastructureKeys[0].(map[string]interface{})
-	networksKeys := infrastructure["networks"].([]interface{})
 
+	var networksKeys []interface{}
 	var networks []string
 
+	networksKeys = infrastructure["networks"].([]interface{})
 	for _, network := range networksKeys {
 		networks = append(networks, network.(string))
 	}
@@ -648,6 +658,8 @@ func resourceClusterCreate(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceClusterRead(d *schema.ResourceData, m interface{}) error {
+
+	log.Printf(" [DEBUG] ***************** WITHIN READ FUNCTION: %+v", *d)
 
 	client := m.(*ccp.Client)
 
