@@ -17,7 +17,6 @@ package main
 
 import (
 	"errors"
-	"log"
 
 	"github.com/ccp-clientlibrary-go/ccp"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -387,6 +386,7 @@ func resourceClusterCreate(d *schema.ResourceData, m interface{}) error {
 	networkPluginsKeys := networkPlugins[0].(map[string]interface{})
 
 	networkPluginName := networkPluginsKeys["name"].(string)
+
 	var networkPluginDetail ccp.NetworkPluginDetails
 
 	if networkPluginsKeys["details"].([]interface{}) != nil {
@@ -638,11 +638,7 @@ func resourceClusterCreate(d *schema.ResourceData, m interface{}) error {
 		return errors.New(err.Error())
 	}
 
-	log.Printf(" [DEBUG] ***************** CLUSTER STATUS: %+v", *cluster)
-
 	uuid := *cluster.UUID
-
-	log.Printf(" [DEBUG] ***************** CLUSTER UUID: %+v", *cluster.UUID)
 
 	d.SetId(uuid)
 
@@ -652,14 +648,10 @@ func resourceClusterCreate(d *schema.ResourceData, m interface{}) error {
 		return errors.New(err.Error())
 	}
 
-	log.Printf(" [DEBUG] ***************** CLUSTER STATUS: %+v", *cluster.Status)
-
 	return setClusterResourceData(d, cluster)
 }
 
 func resourceClusterRead(d *schema.ResourceData, m interface{}) error {
-
-	log.Printf(" [DEBUG] ***************** WITHIN READ FUNCTION: %+v", *d)
 
 	client := m.(*ccp.Client)
 
@@ -674,8 +666,6 @@ func resourceClusterRead(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceClusterUpdate(d *schema.ResourceData, m interface{}) error {
-
-	log.Printf("[DEBUG] *********** loadbalancer_ip_num %d", d.Get("loadbalancer_ip_num").(int))
 
 	client := m.(*ccp.Client)
 
@@ -695,7 +685,7 @@ func resourceClusterUpdate(d *schema.ResourceData, m interface{}) error {
 		return errors.New("UNABLE TO RETRIEVE DETAILS FOR CLUSTER: " + d.Get("name").(string))
 	}
 
-	log.Printf("[DEBUG] *********** PATCH %+v", *cluster.LoadBalancerIPNum)
+	// only supporting 1 worker node pool (worker_node_pools.0) at the moment
 
 	if d.HasChange("worker_node_pools.0.size") {
 		_, newValue := d.GetChange("worker_node_pools.0.size")
@@ -731,8 +721,6 @@ func resourceClusterDelete(d *schema.ResourceData, m interface{}) error {
 }
 
 func setClusterResourceData(d *schema.ResourceData, u *ccp.Cluster) error {
-
-	log.Printf("[DEBUG] *********** CLUSTER DATA: %+v", *u.MasterNodePool.Nodes)
 
 	if err := d.Set("uuid", u.UUID); err != nil {
 		return errors.New("CANNOT SET UUID")
@@ -806,6 +794,7 @@ func setClusterResourceData(d *schema.ResourceData, u *ccp.Cluster) error {
 	} else {
 		infraIn["resource_pool"] = *u.Infra.ResourcePool
 	}
+
 	infraIn["datacenter"] = *u.Infra.Datacenter
 	infraIn["cluster"] = *u.Infra.Cluster
 	infraIn["datastore"] = *u.Infra.Datastore
@@ -815,7 +804,6 @@ func setClusterResourceData(d *schema.ResourceData, u *ccp.Cluster) error {
 	infraOut = append(infraOut, infraIn)
 
 	if err := d.Set("infra", infraOut); err != nil {
-		log.Printf("[DEBUG] *********** INFRA: %+v", err)
 		return errors.New("CANNOT SET INFRA")
 	}
 
@@ -927,8 +915,6 @@ func setClusterResourceData(d *schema.ResourceData, u *ccp.Cluster) error {
 	networkPluginIn["details"] = networkPluginDetailsOut
 
 	networkPluginOut = append(networkPluginOut, networkPluginIn)
-
-	log.Printf("{DEBU} ********* OUT %s", networkPluginOut)
 
 	if err := d.Set("network_plugin", networkPluginOut); err != nil {
 		return errors.New("CANNOT SET NETWORK PLUGIN")
