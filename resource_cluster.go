@@ -632,6 +632,10 @@ func resourceClusterCreate(d *schema.ResourceData, m interface{}) error {
 		AWSIamEnabled:      aws_iam_enabled,
 	}
 
+	if len(*newCluster.NTPPools) == 0 {
+		*newCluster.NTPPools = nil
+	}
+
 	cluster, err := client.AddClusterSynchronous(&newCluster)
 
 	if err != nil {
