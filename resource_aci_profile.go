@@ -19,7 +19,7 @@ import (
 	"errors"
 	"log"
 
-	"github.com/ccp-clientlibrary-go/ccp"
+	"github.com/ccp-client-library/ccp"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 

@@ -18,7 +18,7 @@ package main
 import (
 	"errors"
 
-	"github.com/ccp-clientlibrary-go/ccp"
+	"github.com/ccp-client-library/ccp"
 	"github.com/hashicorp/terraform/helper/schema"
 )
 
@@ -632,10 +632,6 @@ func resourceClusterCreate(d *schema.ResourceData, m interface{}) error {
 		AWSIamEnabled:      aws_iam_enabled,
 	}
 
-	if len(*newCluster.NTPPools) == 0 {
-		*newCluster.NTPPools = nil
-	}
-
 	cluster, err := client.AddClusterSynchronous(&newCluster)
 
 	if err != nil {
@@ -751,7 +747,7 @@ func setClusterResourceData(d *schema.ResourceData, u *ccp.Cluster) error {
 		return errors.New("CANNOT SET IP ALLOCATION METHOD")
 	}
 	if err := d.Set("master_vip", u.MasterVIP); err != nil {
-		return errors.New("CANNOT SET MASTER VIP")
+		return errors.New("CANNOT SET master VIP")
 	}
 	if err := d.Set("loadbalancer_ip_num", u.LoadBalancerIPNum); err != nil {
 		return errors.New("CANNOT SET NUMBER OF LOAD BALANCERS")
@@ -787,6 +783,7 @@ func setClusterResourceData(d *schema.ResourceData, u *ccp.Cluster) error {
 	infraNetworksOut := make([]interface{}, 0, 0)
 
 	infraNetworksIn := (*u.Infra.Networks)[0]
+
 	infraNetworksOut = append(infraNetworksOut, infraNetworksIn)
 
 	infraOut := make([]interface{}, 0, 0)
@@ -851,23 +848,20 @@ func setClusterResourceData(d *schema.ResourceData, u *ccp.Cluster) error {
 	masterPoolOut = append(masterPoolOut, masterPoolIn)
 
 	if err := d.Set("master_node_pool", masterPoolOut); err != nil {
-		return errors.New("CANNOT SET MASTER NODE POOL")
+		return errors.New("CANNOT SET master NODE POOL")
 	}
 
 	workerPoolOut := make([]interface{}, 0, 0)
 	workerPoolIn := make(map[string]interface{})
 
-	workerPoolNodesOut := make([]interface{}, 0, 0)
-	workerPoolNodesIn := make(map[string]interface{})
+	workerPoolNodesOut := make([]interface{}, 0, 10)
 
 	for _, workerNode := range *u.WorkerNodePool {
 
 		workerPoolIn = make(map[string]interface{})
 
-		workerPoolNodesOut = make([]interface{}, 0, 0)
-		workerPoolNodesIn = make(map[string]interface{})
-
 		for _, node := range *workerNode.Nodes {
+			workerPoolNodesIn := make(map[string]interface{})
 			workerPoolNodesIn["name"] = *node.Name
 			workerPoolNodesIn["status"] = *node.Status
 
@@ -902,7 +896,7 @@ func setClusterResourceData(d *schema.ResourceData, u *ccp.Cluster) error {
 	}
 
 	if err := d.Set("worker_node_pools", workerPoolOut); err != nil {
-		return errors.New("CANNOT SET WORKER NODE POOL")
+		return errors.New("CANNOT SET worker NODE POOL")
 	}
 
 	networkPluginDetailsOut := make([]interface{}, 0, 0)
