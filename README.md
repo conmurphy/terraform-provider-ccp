@@ -270,7 +270,7 @@ https://www.terraform.io/docs/extend/how-terraform-works.html#discovery
 * Has not been tested with GPUs
 * Has not been tested with resource pools
 * `networks` is required for the ACI CNI config however it can be left with whitespace as per the example config
-* When increasing worker size the response will return straight away. Behind the scenes CCP will be adding a new worker node. This is the current behaviour of the API. Therefore the TFState file won’t contain the new worker node details. Once the node is ready you can run the `terraform refresh` command to refresh the state. If you run the refresh command before the node has completed you should see the phase as `creating`
+* When increasing worker size the response will return straight away. Behind the scenes CCP will be adding a new worker node. This is the current behaviour of the API. Therefore the TFState file won’t contain the new worker node details. Once the node is ready you can run the `terraform refresh` command to refresh the state. If you run the refresh command before the node has completed you should see the phase as `creating`.
 
 ## License
 
