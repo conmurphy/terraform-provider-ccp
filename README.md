@@ -10,7 +10,7 @@ Table of Contents
   * [CCP Terraform Provider Plugin](#ccp-terraform-provider-plugin)
       * [Quick Start Calico](#quick-start-calico)
       * [Quick Start ACI CNI](#quick-start-aci-cni)
-      * [Installation](#installation)
+      * [Building and Installation](#building-and-installation)
       * [Guidelines and Limitations](#guidelines-and-limitations)
       * [License](#license)
  
@@ -234,7 +234,7 @@ resource "ccp_cluster" "cluster" {
 
 ```
 
-## Installation
+## Building and Installation
 
 1. Clone provider repo to local machine.
 
