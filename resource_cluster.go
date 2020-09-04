@@ -416,7 +416,9 @@ func resourceClusterCreate(d *schema.ResourceData, m interface{}) error {
 
 	networksKeys = infrastructure["networks"].([]interface{})
 	for _, network := range networksKeys {
-		networks = append(networks, network.(string))
+		if network != nil {
+			networks = append(networks, network.(string))
+		}
 	}
 
 	infra := ccp.Infra{
@@ -862,8 +864,13 @@ func setClusterResourceData(d *schema.ResourceData, u *ccp.Cluster) error {
 
 		for _, node := range *workerNode.Nodes {
 			workerPoolNodesIn := make(map[string]interface{})
-			workerPoolNodesIn["name"] = *node.Name
-			workerPoolNodesIn["status"] = *node.Status
+			if node.Name != nil {
+				workerPoolNodesIn["name"] = *node.Name
+			}
+
+			if node.Status != nil {
+				workerPoolNodesIn["status"] = *node.Status
+			}
 
 			if node.StatusDetail != nil {
 				workerPoolNodesIn["status_detail"] = *node.StatusDetail
@@ -873,9 +880,17 @@ func setClusterResourceData(d *schema.ResourceData, u *ccp.Cluster) error {
 				workerPoolNodesIn["status_reason"] = *node.StatusReason
 			}
 
-			workerPoolNodesIn["private_ip"] = *node.PrivateIP
-			workerPoolNodesIn["public_ip"] = *node.PublicIP
-			workerPoolNodesIn["phase"] = *node.Phase
+			if node.PrivateIP != nil {
+				workerPoolNodesIn["private_ip"] = *node.PrivateIP
+			}
+
+			if node.PublicIP != nil {
+				workerPoolNodesIn["public_ip"] = *node.PublicIP
+			}
+
+			if node.Phase != nil {
+				workerPoolNodesIn["phase"] = *node.Phase
+			}
 
 			workerPoolNodesOut = append(workerPoolNodesOut, workerPoolNodesIn)
 		}

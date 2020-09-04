@@ -17,7 +17,6 @@ package main
 
 import (
 	"errors"
-	"log"
 
 	"github.com/ccp-client-library/ccp"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -151,11 +150,7 @@ func resourceACIProfileCreate(d *schema.ResourceData, m interface{}) error {
 		return errors.New(err.Error())
 	}
 
-	log.Printf(" [DEBUG] ***************** CLUSTER STATUS: %+v", *aciProfile)
-
 	uuid := *aciProfile.UUID
-
-	log.Printf(" [DEBUG] ***************** CLUSTER UUID: %+v", *aciProfile.UUID)
 
 	d.SetId(uuid)
 
