@@ -246,7 +246,9 @@ resource "ccp_cluster" "cluster" {
 
 3. Copy binary to local Terraform plugin directory.
 
-As per the following document, "third-party plugins should usually be installed in the user plugins directory, which is located at ~/.terraform.d/plugins". "~/.terraform.d/plugins/<OS>_<ARCH> or %APPDATA%\terraform.d\plugins\<OS>_<ARCH>	The user plugins directory, with explicit OS and architecture."
+As per the following document, third-party plugins should usually be installed in the user plugins directory, which is located at `~/.terraform.d/plugins`. 
+
+`~/.terraform.d/plugins/<OS>_<ARCH>` or `%APPDATA%\terraform.d\plugins\<OS>_<ARCH>`	The user plugins directory, with explicit OS and architecture.
 
 https://www.terraform.io/docs/extend/how-terraform-works.html#discovery
 
