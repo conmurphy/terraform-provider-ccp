@@ -10,6 +10,7 @@ Table of Contents
   * [CCP Terraform Provider Plugin](#ccp-terraform-provider-plugin)
       * [Quick Start Calico](#quick-start-calico)
       * [Quick Start ACI CNI](#quick-start-aci-cni)
+      * [Installation](#installation)
       * [Guidelines and Limitations](#guidelines-and-limitations)
       * [License](#license)
  
@@ -232,7 +233,33 @@ resource "ccp_cluster" "cluster" {
 }
 
 ```
+
+## Installation
+
+1. Clone provider repo to local machine.
+
+`git clone https://github.com/conmurphy/terraform-provider-ccp.git`
+
+2. From within the newly cloned directory, build the binary
+
+`go build -o terraform-provider-ccp_v0.1.0`
+
+3. Copy binary to local Terraform plugin directory.
+
+As per the following document, "third-party plugins should usually be installed in the user plugins directory, which is located at ~/.terraform.d/plugins". "~/.terraform.d/plugins/<OS>_<ARCH> or %APPDATA%\terraform.d\plugins\<OS>_<ARCH>	The user plugins directory, with explicit OS and architecture."
+
+https://www.terraform.io/docs/extend/how-terraform-works.html#discovery
+
+`cp terraform-provider-ccp_v0.1.0 ~/.terraform.d/plugins/cisco.com/ccp/ccp/0.1.0/darwin_amd64`
+
+4. Initialise Terraform
+
+` terraform init`
+
+5. Ready to start planning and applying.
+
 ## Guidelines and Limitations
+
 
 * Scaling: 
   * loadbalancer_ip_num increased onr decreased
