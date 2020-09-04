@@ -264,7 +264,7 @@ https://www.terraform.io/docs/extend/how-terraform-works.html#discovery
 
 
 * Scaling: 
-  * loadbalancer_ip_num increased onr decreased
+  * loadbalancer_ip_num can be increased or decreased
   * worker_node_pool.size can be increased or decreased
 * Supports single worker node pool
 * Has not been tested with GPUs
