@@ -2,21 +2,20 @@
 
 This is a provider plugin for Terraform which allows Terraform to interact with various Cisco Container Platform (CCP) resources. 
 
-It is currently a __Proof of Concept__ and has been developed and tested against Cisco Container Platform 1.5 with Go version 1.10 and Terraform version v0.10.2
+It is currently a __Proof of Concept__ and has been developed and tested against Cisco Container Platform 6.1 with Terraform version v0.13.0
 
 Table of Contents
 =================
 
   * [CCP Terraform Provider Plugin](#ccp-terraform-provider-plugin)
-      * [Quick Start](#quick-start)
-      * [Resources](#resources)
-         * [Cluster](#cluster)
-         * [User](#user)
+      * [Quick Start Calico](#quick-start-calico)
+      * [Quick Start ACI CNI](#quick-start-aci-cni)
+      * [Guidelines and Limitations](#guidelines-and-limitations)
       * [License](#license)
-       
-Created by [gh-md-toc](https://github.com/ekalinin/github-markdown-toc)
  
-## Quick Start
+## Quick Start Calico
+
+The following example config can be found in the main.tf.dummydata-calico file. Remove the `.dummydata-calico` extension and replace the example config with your specific environment details.
 
 ```golang
 
@@ -58,396 +57,92 @@ resource "ccp_user" "user" {
 
 
 /*
-    This will create a new cluster within CCP
+    This will create a new cluster within CCP with Calico as the CNI
 */
 
-variable "networks" {
-   type = "list"
-   default = ["my_ccp_network","k8-priv-iscsivm-network"]
-}
-      
-variable "worker_node_pool" {
-   type = "map"
-   default = 
-      {
-        vcpus = 2,
-        memory = 4096,
-        template = "ccp-tenant-image-1.10.1-ubuntu16-1.5.0"
-      }
-}
-
-variable "master_node_pool" {
-   type = "map"
-   default = 
-      {
-        vcpus = 2,
-        memory = 4192,
-        template = "ccp-tenant-image-1.10.1-ubuntu16-1.5.0"
-      }
-}
-
-variable "providers" {
-   type = "map"
-   default = 
-      {
-        vsphere_datacenter          = "my_ccp_datacenter",
-        vsphere_datastore           = "my_ccp_datastore",
-        vsphere_client_config_uuid  = "aaa123-bbb123-ccc123-ddd123-eee123"
-        vsphere_working_dir         = "ccp_working_directory"
-      }
-}
-
-variable "deployer" {
-   type = "map"
-   default = 
-      {
-        provider_type = "vsphere"
-      }  
-}
-
-variable "network_plugin" {
-   type = "map"
-   default = 
-      {
-        name = "contiv-vpp",
-        status = "",
-        details = ""
-      }
-}
-
-variable "infra" {
-   type = "map"
-   default = 
-      {
-        datacenter	                = "my_vsphere_datacenter"
-        cluster	                    = "my_vsphere_cluster"
-        datastore	                  = "my_vsphere_datastore"
-        resource_pool               = "my_vsphere_resource_pool"
-      }
-}
-
 resource "ccp_cluster" "cluster" {
-    provider_client_config_uuid = "123aaa-123bbb-123ccc-123ddd-123eee"
-    name	                      = "builtByTerraform"
-    is_harbor_enabled	          = false
-    is_istio_enabled	          = true
-    kubernetes_version	        = "1.10.1"
-    loadbalancer_ip_num	        = 1
-    masters                 	  = 1
-    workers	                    = 3
-    ssh_user	                  = "ccpuser"
-    ssh_key	                    = "ssh-rsa AAA123bbb123CCC123 my_username@localhost"
-    type	                      = 1
-    master_node_pool            = "${var.master_node_pool}"
-    worker_node_pool            = "${var.worker_node_pool}"
-    networks                    = "${var.networks}"
-    deployer                    = "${var.deployer}"
-    providers                   = "${var.providers}"
-    network_plugin              = "${var.network_plugin}"
-    infra                       = "${var.infra}"
-    ingress_vip_pool_id         = "aaa-bbb-ccc-ddd-eee"      
+  provider_client_config_uuid = "1abc2-1abc2-1abc2-1abc2" //Calico provider
+  name                        = "builtbyterraform"
+  kubernetes_version          = "1.16.3"
+  loadbalancer_ip_num         = 3
+  type                        = "vsphere"
+  ip_allocation_method = "ccpnet"
+  subnet_uuid            = "d7a6f267-8545-4875-85c5-bf5b7f46b4f0" 
+  infra {
+      datacenter    = "vcenter-datacenter-name"
+      cluster       = "vcenter-cluster-name"
+      datastore     = "vcenter-datastore-name"
+      resource_pool = " "
+      networks = ["vcenter-network-name"] 
+
+  }
+  master_node_pool {
+         name = "master-group"
+         size = 1
+         gpus=[]
+         vcpus    = 2
+         memory   = 16384
+         template = "ccp-tenant-image-1.16.3-ubuntu18-6.1.1"
+         ssh_user = "admin"
+         ssh_key = "ssh-ed25519 AAAAC3fsdhSDFSDFbildsfDFSSDFbsdfFSDFSD"
+         kubernetes_version = "1.16.3"
+
+   }
+  worker_node_pools     {
+         name = "node-group"
+         size = 4
+         gpus=[]
+         vcpus    = 2
+         memory   = 16384
+         template = "ccp-tenant-image-1.16.3-ubuntu18-6.1.1"
+         ssh_user = "admin"
+         ssh_key = "ssh-ed25519 AAAAC3fsdhSDFSDFbildsfDFSSDFbsdfFSDFSD"
+         kubernetes_version = "1.16.3"
+   }
+   network_plugin {
+      name ="calico"
+      details {
+        pod_cidr = "192.168.0.0/16"
+      }
+   }
 }
 
 ```
 
-## Resources
+## Quick Start ACI CNI
 
-- [Cluster](#cluster)
-- [User](#user)
+The following example config can be found in the main.tf.dummydata-aci file. Remove the `.dummydata-aci` extension and replace the example config with your specific environment details.
 
-### Cluster
+```golang
 
-```go
-type Cluster struct {
-	uuid                          *string  
-	provider_client_config_uuid   *string 
-	aci_profile_uuid              *string
-	name                          *string 
-	description                   *string  
-	workers                       *int64  
-	masters                       *int64
-	resource_pool                 *string               
-	networks                      *[]string            
-	vcpus                         *int64               
-	memory                        *int64                
-	type                          *int64          
-	datacenter                    *string            
-	cluster                       *string              
-	datastore                     *string          
-	state                         *string 
-	template                      *string
-	ssh_user                      *string 
-	ssh_password                  *string 
-	ssh_key                       *string 
-	labels                        *[]label 
-	nodes                         *[]node   
-	deployer                      *kube_adm              
-	kubernetes_version            *string               
-	cluster_env_url               *string               
-	cluster_dashboard_url         *string               
-	network_plugin                *network_plugin
-	ccp_private_ssh_key           *string              
-	ccp_public_ssh_key            *string              
-	ntp_pools                     *[]string       
-	netp_servers                  *[]string      
-	is_control_cluster            *bool             
-	is_adopt                      *bool              
-	registries_self_signed        *[]string           
-	registries_insecure           *[]string            
-	registries_root_ca            *[]string          
-	ingress_vip_pool_id           *string             
-	ingress_vip_addr_id           *string              
-	ingress_vips                  *[]string             
-	keepalived_vrid               *int64              
-	helm_charts                   *[]helm_chart    
-	master_vip_addr_id            *string          
-	master_vip                    *string        
-	master_mac_addresses          *[]string      
-	cluster_health_status         *string       
-	auth_list                     *[]string 
-	is_harbor_enabled             *bool           
-	harbor_admin_server_password  *string        
-	harbor_registry_size          *string        
-	load_balancer_ip_num          *int64          
-	is_istio_enabled              *bool          
-	worker_node_pool              *worker_node_pool  
-	master_node_pool              *master_node_pool  
-	infra                         *infra 
+/*
+    These are the credentials used to login to CCP
+*/
+
+variable "username" {
+    type = "string"
+    default="my_ccp_admin_account"
 }
 
-type infra struct {
-	datacenter                 *string   
-	datastore                  *string  
-	cluster                    *string   
-	networks                   *[]string
-	resource_pool              *string   
+variable "password" {
+    type = "string"
+    default="my_ccp_password"
 }
 
-type label struct {
-	key                        *string  
-	value                      *string  
+variable "base_url" {
+    type = "string"
+    default="https://my_ccp_url:ccp_port"
 }
 
-type node struct {
-	uuid                       *string   
-	name                       *string   
-	public_ip                  *string    
-	private_ip     		         *string   
-	is_master    		           *bool  
-	state     	               *string   
-	cloud_init_data  		       *string    
-	kubernetes_version         *string   
-	error_log        	         *string   
-	template       	           *string   
-	mac_addresses              *[]string  
+provider "ccp" {
+    username = "${var.username}"
+    password = "${var.password}"
+    base_url = "${var.base_url}"
 }
 
-type deployer struct {
-	proxy_cmd                  *string    
-	provider_type              *string   
-	provider                   *provider 
-	ip                         *string  
-	port                       *int64   
-	username                   *string    
-	password                   *string    
-
-type network_plugin struct {
-	name   			               *string  
-	status 			               *string  
-	details			               *string  
-}
-
-type helm_chart struct {
-	helmchart_uuid		         *string  
-	cluster_UUID 		           *string  
-	chart_url    		           *string  
-	name         		           *string  
-	options     		           *string  
-}	
-
-type provider struct {
-	vsphere_datacenter            *string             
-	vsphere_datastore             *string             
-	vsphere_scsi_controller_type  *string           
-	vsphere_working_dir           *string           
-	vsphere_client_config_uuid    *string          
-	client_config                 *vsphere_client_config  
-}
-
-type vsphere_client_config struct {
-	ip       		               *string  
-	port     		               *int64  
-	username 		               *string  
-	password 		               *string  
-}
-
-type worker_node_pool struct {
-	vcpus   		               *int64   
-	memory  		               *int64   
-	template		               *string  
-}
-
-type master_node_pool struct {
-	vcpus    		               *int64   
-	memory   		               *int64   
-	template 		               *string  
-}
-```
-
-##### __Required Fields__
-* ProviderClientConfigUUID
-* Name
-* KubernetesVersion
-* ResourcePool
-* Networks
-* SSHKey
-* Datacenter
-* Cluster
-* Datastore
-* Workers
-* SSHUser
-* Type
-* Masters
-* Deployer
-  * ProviderType
-* Provider 
-    * VsphereDataCenter
-    * VsphereClientConfigUUID
-    * VsphereDatastore
-    * VsphereWorkingDir
-* NetworkPlugin
-  * Name 
-  * Status
-  * Details
-* IsHarborEnabled         
-* LoadBalancerIPNum                
-* IsIstioEnabled             
-* WorkerNodePool    
-  * VCPUs    
-  * Memory  
-  * Template 
-* MasterNodePool           
-  * VCPUs    
-  * Memory  
-  * Template 
-
-##### __Important Notes__
-* Only the following fields can be changed once the resource has been created
-  * workers
-  * loadbalancer_ip_num
-* If additional fields are changed they will not be updated using ```terraform apply```
-
-##### Example
-```go  
-variable "networks" {
-   type = "list"
-   default = ["my_ccp_network","k8-priv-iscsivm-network"]
-}
-      
-variable "worker_node_pool" {
-   type = "map"
-   default = 
-      {
-        vcpus = 2,
-        memory = 4096,
-        template = "ccp-tenant-image-1.10.1-ubuntu16-1.5.0"
-      }
-}
-
-variable "master_node_pool" {
-   type = "map"
-   default = 
-      {
-        vcpus = 2,
-        memory = 4192,
-        template = "ccp-tenant-image-1.10.1-ubuntu16-1.5.0"
-      }
-}
-
-variable "providers" {
-   type = "map"
-   default = 
-      {
-        vsphere_datacenter          = "my_ccp_datacenter",
-        vsphere_datastore           = "my_ccp_datastore",
-        vsphere_client_config_uuid  = "aaa123-bbb123-ccc123-ddd123-eee123"
-        vsphere_working_dir         = "ccp_working_directory"
-      }
-}
-
-variable "deployer" {
-   type = "map"
-   default = 
-      {
-        provider_type = "vsphere"
-      }  
-}
-
-variable "network_plugin" {
-   type = "map"
-   default = 
-      {
-        name = "contiv-vpp",
-        status = "",
-        details = ""
-      }
-}
-
-variable "infra" {
-   type = "map"
-   default = 
-      {
-        datacenter	                = "my_vsphere_datacenter"
-        cluster	                    = "my_vsphere_cluster"
-        datastore	                  = "my_vsphere_datastore"
-        resource_pool               = "my_vsphere_resource_pool"
-      }
-}
-
-resource "ccp_cluster" "cluster" {
-    provider_client_config_uuid = "123aaa-123bbb-123ccc-123ddd-123eee"
-    name	                      = "builtByTerraform"
-    is_harbor_enabled	          = false
-    is_istio_enabled	          = true
-    kubernetes_version	        = "1.10.1"
-    loadbalancer_ip_num	        = 1
-    masters                 	  = 1
-    workers	                    = 3
-    ssh_user	                  = "ccpuser"
-    ssh_key	                    = "ssh-rsa AAA123bbb123CCC123 my_username@localhost"
-    type	                      = 1
-    master_node_pool            = "${var.master_node_pool}"
-    worker_node_pool            = "${var.worker_node_pool}"
-    networks                    = "${var.networks}"
-    deployer                    = "${var.deployer}"
-    providers                   = "${var.providers}"
-    network_plugin              = "${var.network_plugin}"
-    infra                       = "${var.infra}"
-    ingress_vip_pool_id         = "aaa-bbb-ccc-ddd-eee"      
-}
-```
-
-### User
-
-```go
-	token     *string 
-	username  *string 
-	disable   *bool  
-	role      *string 
-	firstname *string
-	lastname  *string
-	password  *string
-```
-
-##### __Required Fields__
-* Username
-* Role
-
-##### __Important Notes__
-* If ```Username``` is updated the resource will be destroyed and recreated within CCP
-
-##### Example
-```go  
+/*
+    This will create a new local user within CCP
+*/
 resource "ccp_user" "user" {
     firstname       = "Terrafom"
     lastname        = "Plugin"
@@ -455,9 +150,99 @@ resource "ccp_user" "user" {
     username        = "builtByTerraform"
     role            = "Administrator"
 }
+
+/*
+    This will create a new ACI Profile to use with the new cluster.
+*/
+
+resource "ccp_aci_profile" "aci_profile" {
+  
+  name="builtbyterraform"
+	apic_hosts= "10.1.1.1"
+	apic_username= "admin"
+	apic_password= "password"
+	aci_vmm_domain_name= "DM_VMM"
+	aci_infra_vlan_id= 4093
+	vrf_name= "default"
+	l3_outside_policy_name= "L3OUT_common"
+	l3_outside_network_name= "eEPG_common"
+	aaep_name= "AEP_ALL"
+	nameservers= ["8.8.8.8"]
+	control_plane_contract_name= "ANY-ANY"
+	node_vlan_start= 3300
+	node_vlan_end= 3400
+	pod_subnet_start= "100.65.0.1/16"
+	service_subnet_start= "100.100.0.1/16"
+	multicast_range= "225.32.0.0/16"
+	aci_tenant= "common"
+
+}
+
+/*
+    This will create a new cluster within CCP using the ACI CNI
+*/
+
+resource "ccp_cluster" "cluster" {
+  provider_client_config_uuid = "8b27074e-9ed8-4934-88ec-34gf43dgf" // ACI CNI provider
+  name                        = "builtbyterraform"
+  kubernetes_version          = "1.16.3"
+  loadbalancer_ip_num         = 1 
+  type                        = "vsphere"
+  ip_allocation_method = "ccpnet"
+  infra {
+      datacenter    = "vcenter-datacenter-name"
+      cluster       = "vcenter-cluster-name"
+      datastore     = "vcenter-datastore-name"
+      resource_pool = " "
+      networks = [" "]
+  }
+  master_node_pool {
+         name = "master-group"
+         size = 1
+         gpus=[]
+         vcpus    = 2
+         memory   = 16384
+         template = "ccp-tenant-image-1.16.3-ubuntu18-6.1.1"
+         ssh_user = "admin"
+         ssh_key = "ssh-ed25519 AAAAC3fsdhSDFSDFbildsfDFSSDFbsdfFSDFSD"
+         kubernetes_version = "1.16.3"
+
+   }
+  worker_node_pools     {
+         name = "node-group"
+         size = 4
+         gpus=[]
+         vcpus    = 2
+         memory   = 16384
+         template = "ccp-tenant-image-1.16.3-ubuntu18-6.1.1"
+         ssh_user = "admin"
+         ssh_key = "ssh-ed25519 AAAAC3fsdhSDFSDFbildsfDFSSDFbsdfFSDFSD"
+         kubernetes_version = "1.16.3"
+   }
+   network_plugin {
+      name="contiv-aci"
+      details {
+      }
+   }
+
+    routable_cidr = "10.140.2.0/24" 
+    aci_profile_uuid = ccp_aci_profile.aci_profile.uuid
+
+    depends_on = [ccp_aci_profile.aci_profile]
+}
+
 ```
+## Guidelines and Limitations
+
+* Scaling: 
+  * loadbalancer_ip_num increased onr decreased
+  * worker_node_pool.size can be increased or decreased
+* Supports single worker node pool
+* Has not been tested with GPUs
+* Has not been tested with resource pools
+* `networks` is required for the ACI CNI config however it can be left with whitespace as per the example config
+* When increasing worker size the response will return straight away. Behind the scenes CCP will be adding a new worker node. This is the current behaviour of the API. Therefore the TFState file won’t contain the new worker node details. Once the node is ready you can run the `terraform refresh` command to refresh the state. If you run the refresh command before the node has completed you should see the phase as `creating`
 
 ## License
 
-This project is licensed to you under the terms of the [Cisco Sample
-Code License](./LICENSE).
+This project is licensed to you under the terms of the [Cisco Sample Code License](./LICENSE).
